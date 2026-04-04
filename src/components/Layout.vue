@@ -163,19 +163,23 @@ const handleCommand = (command: string) => {
     transition: width 0.3s;
     
     .logo {
-      height: 64px;
+      min-height: 64px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 0 16px;
+      padding: 12px 8px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       
       .logo-text {
         color: #fff;
-        font-size: 18px;
+        font-size: 14px;
         font-weight: 600;
-        margin-left: 12px;
-        white-space: nowrap;
+        margin-top: 8px;
+        text-align: center;
+        line-height: 1.2;
+        word-wrap: break-word;
+        white-space: normal;
       }
     }
     
