@@ -82,6 +82,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import request from '@/utils/request'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -141,24 +142,20 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
-        // 模拟登录请求
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // 调用后端登录API
+        const response = await request.post('/users/login', {
+          username: loginForm.username,
+          password: loginForm.password
+        })
         
         // 设置登录状态
-        userStore.setToken('mock_token_' + Date.now())
-        userStore.setUserInfo({
-          id: 1,
-          username: loginForm.username,
-          realName: '系统管理员',
-          role: 'admin',
-          roleName: '超级管理员',
-          permissions: ['*']
-        })
+        userStore.setToken(response.data.token)
+        userStore.setUserInfo(response.data.userInfo)
         
         ElMessage.success('登录成功')
         router.push('/dashboard')
-      } catch (error) {
-        ElMessage.error('登录失败，请重试')
+      } catch (error: any) {
+        ElMessage.error(error.message || '登录失败，请重试')
       } finally {
         loading.value = false
       }

@@ -155,6 +155,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDate, formatStatus, formatMemberLevel } from '@/utils/format'
 import type { User } from '@/types'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -174,64 +175,22 @@ const pagination = reactive({
 
 const userForm = reactive<Partial<User>>({})
 
-// 模拟用户数据
-const userList = ref<User[]>([
-  {
-    id: 1,
-    username: 'zhangsan',
-    phone: '13800138001',
-    realName: '张三',
-    email: 'zhangsan@example.com',
-    memberLevel: 'gold',
-    status: 'active',
-    authStatus: 'approved',
-    createdAt: '2026-01-15 10:30:00',
-    lastLoginAt: '2026-04-04 09:20:00'
-  },
-  {
-    id: 2,
-    username: 'lisi',
-    phone: '13800138002',
-    realName: '李四',
-    memberLevel: 'normal',
-    status: 'active',
-    authStatus: 'pending',
-    createdAt: '2026-02-20 14:25:00',
-    lastLoginAt: '2026-04-03 16:45:00'
-  },
-  {
-    id: 3,
-    username: 'wangwu',
-    phone: '13800138003',
-    realName: '王五',
-    memberLevel: 'vip',
-    status: 'frozen',
-    authStatus: 'approved',
-    createdAt: '2026-01-08 09:15:00',
-    lastLoginAt: '2026-03-28 11:30:00'
-  },
-  {
-    id: 4,
-    username: 'zhaoliu',
-    phone: '13800138004',
-    realName: '赵六',
-    memberLevel: 'silver',
-    status: 'active',
-    authStatus: 'approved',
-    createdAt: '2026-03-10 16:20:00',
-    lastLoginAt: '2026-04-04 08:10:00'
-  },
-  {
-    id: 5,
-    username: 'qianqi',
-    phone: '13800138005',
-    realName: '钱七',
-    memberLevel: 'normal',
-    status: 'banned',
-    authStatus: 'rejected',
-    createdAt: '2026-02-05 11:45:00'
+// 用户数据
+const userList = ref<User[]>([])
+
+// 获取用户列表
+const getUsers = async () => {
+  loading.value = true
+  try {
+    const response = await request.get('/users')
+    userList.value = response.data
+    pagination.total = response.data.length
+  } catch (error) {
+    ElMessage.error('获取用户列表失败')
+  } finally {
+    loading.value = false
   }
-])
+}
 
 const getMemberLevelType = (level: string) => {
   const typeMap: Record<string, string> = {
@@ -244,18 +203,14 @@ const getMemberLevelType = (level: string) => {
 }
 
 const handleSearch = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-    ElMessage.success('查询成功')
-  }, 500)
+  getUsers()
 }
 
 const handleReset = () => {
   searchForm.keyword = ''
   searchForm.status = ''
   searchForm.memberLevel = ''
-  handleSearch()
+  getUsers()
 }
 
 const handleExport = () => {
@@ -317,7 +272,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 onMounted(() => {
-  pagination.total = 125
+  getUsers()
 })
 </script>
 

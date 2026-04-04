@@ -186,6 +186,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatMoney, formatDate, formatStatus } from '@/utils/format'
 import type { Order } from '@/types'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -203,103 +204,40 @@ const pagination = reactive({
   total: 0
 })
 
-// 模拟订单数据
-const orderList = ref<Order[]>([
-  {
-    id: 1,
-    orderNo: 'DD202604040001',
-    userId: 1,
-    userName: '张三',
-    totalAmount: 268.50,
-    status: 'paid',
-    deliveryType: 'delivery',
-    address: {
-      name: '张三',
-      phone: '13800138001',
-      province: '北京市',
-      city: '北京市',
-      district: '朝阳区',
-      detail: '某某街道123号'
-    },
-    items: [
-      { id: 1, productId: 1, productName: '阿莫西林胶囊', specification: '0.25g*24粒', price: 18.50, quantity: 2, subtotal: 37.00 },
-      { id: 2, productId: 2, productName: '感冒灵颗粒', specification: '10g*9袋', price: 23.50, quantity: 1, subtotal: 23.50 }
-    ],
-    createdAt: '2026-04-04 14:30:00',
-    paidAt: '2026-04-04 14:31:20'
-  },
-  {
-    id: 2,
-    orderNo: 'DD202604040002',
-    userId: 2,
-    userName: '李四',
-    totalAmount: 156.00,
-    status: 'pending',
-    deliveryType: 'self',
-    items: [
-      { id: 3, productId: 3, productName: '维生素C片', specification: '100mg*100片', price: 28.00, quantity: 2, subtotal: 56.00 }
-    ],
-    createdAt: '2026-04-04 14:25:00'
-  },
-  {
-    id: 3,
-    orderNo: 'DD202604040003',
-    userId: 3,
-    userName: '王五',
-    totalAmount: 468.00,
-    status: 'shipped',
-    deliveryType: 'delivery',
-    items: [
-      { id: 4, productId: 4, productName: '血压计', specification: '电子腕式', price: 298.00, quantity: 1, subtotal: 298.00 }
-    ],
-    createdAt: '2026-04-04 14:20:00',
-    paidAt: '2026-04-04 14:22:00',
-    shippedAt: '2026-04-04 16:30:00'
-  },
-  {
-    id: 4,
-    orderNo: 'DD202604040004',
-    userId: 4,
-    userName: '赵六',
-    totalAmount: 89.50,
-    status: 'completed',
-    deliveryType: 'self',
-    items: [
-      { id: 5, productId: 5, productName: '创可贴', specification: '100片/盒', price: 19.50, quantity: 1, subtotal: 19.50 }
-    ],
-    createdAt: '2026-04-04 14:15:00',
-    paidAt: '2026-04-04 14:16:00',
-    shippedAt: '2026-04-04 14:20:00',
-    completedAt: '2026-04-04 18:00:00'
-  },
-  {
-    id: 5,
-    orderNo: 'DD202604040005',
-    userId: 5,
-    userName: '钱七',
-    totalAmount: 356.00,
-    status: 'processing',
-    deliveryType: 'delivery',
-    items: [
-      { id: 6, productId: 6, productName: '血糖仪', specification: '含50片试纸', price: 198.00, quantity: 1, subtotal: 198.00 }
-    ],
-    createdAt: '2026-04-04 14:10:00',
-    paidAt: '2026-04-04 14:12:00'
+// 订单数据
+const orderList = ref<Order[]>([])
+
+// 获取订单列表
+const getOrders = async () => {
+  loading.value = true
+  try {
+    const response = await request.get('/orders', {
+      params: {
+        page: pagination.page,
+        limit: pagination.pageSize,
+        status: searchForm.status
+      }
+    })
+    orderList.value = response.data.list
+    pagination.total = response.data.total
+  } catch (error) {
+    ElMessage.error('获取订单列表失败')
+  } finally {
+    loading.value = false
   }
-])
+}
 
 const handleSearch = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-  }, 500)
+  pagination.page = 1
+  getOrders()
 }
 
 const handleReset = () => {
   searchForm.keyword = ''
   searchForm.status = ''
   searchForm.dateRange = []
-  handleSearch()
+  pagination.page = 1
+  getOrders()
 }
 
 const handleExport = () => {
@@ -326,16 +264,16 @@ const handleCancel = async (row: Order) => {
 
 const handleSizeChange = (val: number) => {
   pagination.pageSize = val
-  handleSearch()
+  getOrders()
 }
 
 const handleCurrentChange = (val: number) => {
   pagination.page = val
-  handleSearch()
+  getOrders()
 }
 
 onMounted(() => {
-  pagination.total = 328
+  getOrders()
 })
 </script>
 

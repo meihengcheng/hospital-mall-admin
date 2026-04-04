@@ -77,8 +77,8 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="formatStatus(row.status, 'product').type" size="small">
-              {{ formatStatus(row.status, 'product').text }}
+            <el-tag :type="row.status === 'on' ? 'success' : 'danger'" size="small">
+              {{ row.status === 'on' ? '上架' : '下架' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -114,8 +114,8 @@
           :page-sizes="[10, 20, 50, 100]"
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+          @size-change="handlePageChange"
+          @current-change="handlePageChange"
         />
       </div>
     </el-card>
@@ -217,6 +217,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { formatMoney, formatStatus } from '@/utils/format'
 import type { Product } from '@/types'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -254,95 +255,29 @@ const formRules: FormRules = {
   stock: [{ required: true, message: '请输入库存', trigger: 'blur' }]
 }
 
-// 模拟商品数据
-const productList = ref<Product[]>([
-  {
-    id: 1,
-    name: '阿莫西林胶囊',
-    category: 'prescription',
-    categoryId: 1,
-    price: 18.50,
-    stock: 256,
-    safetyStock: 50,
-    status: 'on',
-    specification: '0.25g*24粒',
-    manufacturer: '华北制药',
-    approvalNumber: '国药准字H13020726',
-    expiryDate: '2027-06-30',
-    images: [],
-    description: '适用于敏感菌所致的各种感染',
-    createdAt: '2026-01-10 09:00:00',
-    updatedAt: '2026-04-01 14:30:00'
-  },
-  {
-    id: 2,
-    name: '感冒灵颗粒',
-    category: 'otc',
-    categoryId: 2,
-    price: 23.50,
-    stock: 189,
-    safetyStock: 30,
-    status: 'on',
-    specification: '10g*9袋',
-    manufacturer: '三九医药',
-    approvalNumber: '国药准字Z44022180',
-    expiryDate: '2027-03-15',
-    images: [],
-    description: '解热镇痛，用于感冒引起的头痛、发热',
-    createdAt: '2026-01-15 10:20:00',
-    updatedAt: '2026-03-28 11:00:00'
-  },
-  {
-    id: 3,
-    name: '电子血压计',
-    category: 'device',
-    categoryId: 3,
-    price: 298.00,
-    stock: 45,
-    safetyStock: 10,
-    status: 'on',
-    specification: '电子腕式',
-    manufacturer: '欧姆龙',
-    images: [],
-    description: '家用电子血压计，精准测量',
-    createdAt: '2026-02-01 14:00:00',
-    updatedAt: '2026-03-20 09:30:00'
-  },
-  {
-    id: 4,
-    name: '维生素C片',
-    category: 'health',
-    categoryId: 4,
-    price: 28.00,
-    stock: 8,
-    safetyStock: 20,
-    status: 'on',
-    specification: '100mg*100片',
-    manufacturer: '养生堂',
-    approvalNumber: '国食健字G20100500',
-    expiryDate: '2026-12-31',
-    images: [],
-    description: '补充维生素C，增强免疫力',
-    createdAt: '2026-02-10 11:30:00',
-    updatedAt: '2026-04-02 16:00:00'
-  },
-  {
-    id: 5,
-    name: '血糖仪',
-    category: 'device',
-    categoryId: 3,
-    price: 198.00,
-    stock: 0,
-    safetyStock: 15,
-    status: 'off',
-    specification: '含50片试纸',
-    manufacturer: '罗氏',
-    images: [],
-    description: '家用血糖监测仪',
-    createdAt: '2026-02-20 09:00:00',
-    updatedAt: '2026-03-25 10:00:00'
+// 商品数据
+const productList = ref<Product[]>([])
+
+// 获取商品列表
+const getProducts = async () => {
+  loading.value = true
+  try {
+    const response = await request.get('/products', {
+      params: {
+        page: pagination.page,
+        limit: pagination.pageSize,
+        category: searchForm.category,
+        status: searchForm.status
+      }
+    })
+    productList.value = response.data.list
+    pagination.total = response.data.total
+  } catch (error) {
+    ElMessage.error('获取商品列表失败')
+  } finally {
+    loading.value = false
   }
-])
+}
 
 const getCategoryName = (category: string) => {
   const map: Record<string, string> = {
@@ -363,17 +298,21 @@ const isNearExpiry = (date?: string) => {
 }
 
 const handleSearch = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-  }, 500)
+  pagination.page = 1
+  getProducts()
 }
 
 const handleReset = () => {
   searchForm.keyword = ''
   searchForm.category = ''
   searchForm.status = ''
-  handleSearch()
+  pagination.page = 1
+  getProducts()
+}
+
+// 分页变化
+const handlePageChange = () => {
+  getProducts()
 }
 
 const handleAdd = () => {
@@ -413,10 +352,24 @@ const handleEdit = (row: Product) => {
 
 const handleSave = async () => {
   if (!formRef.value) return
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success(dialogType.value === 'add' ? '新增成功' : '保存成功')
-      dialogVisible.value = false
+      try {
+        if (dialogType.value === 'add') {
+          // 新增商品
+          await request.post('/products', productForm)
+          ElMessage.success('新增成功')
+        } else {
+          // 编辑商品
+          await request.put(`/products/${productForm.id}`, productForm)
+          ElMessage.success('保存成功')
+        }
+        dialogVisible.value = false
+        // 重新获取商品列表
+        getProducts()
+      } catch (error: any) {
+        ElMessage.error(error.message || '保存失败，请重试')
+      }
     }
   })
 }
@@ -424,13 +377,31 @@ const handleSave = async () => {
 const handleToggleStatus = async (row: Product) => {
   const action = row.status === 'on' ? '下架' : '上架'
   await ElMessageBox.confirm(`确定要${action}该商品吗？`, '提示', { type: 'warning' })
-  row.status = row.status === 'on' ? 'off' : 'on'
-  ElMessage.success(`${action}成功`)
+  try {
+    // 调用后端 API 更新状态
+    await request.put(`/products/${row.id}`, {
+      status: row.status === 'on' ? 'inactive' : 'active'
+    })
+    row.status = row.status === 'on' ? 'off' : 'on'
+    ElMessage.success(`${action}成功`)
+    // 重新获取商品列表
+    getProducts()
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败，请重试')
+  }
 }
 
 const handleDelete = async (row: Product) => {
   await ElMessageBox.confirm('确定要删除该商品吗？', '警告', { type: 'error' })
-  ElMessage.success('删除成功')
+  try {
+    // 调用后端 API 删除商品
+    await request.delete(`/products/${row.id}`)
+    ElMessage.success('删除成功')
+    // 重新获取商品列表
+    getProducts()
+  } catch (error: any) {
+    ElMessage.error(error.message || '删除失败，请重试')
+  }
 }
 
 const handleSizeChange = (val: number) => {
@@ -444,7 +415,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 onMounted(() => {
-  pagination.total = 156
+  getProducts()
 })
 </script>
 
