@@ -2,9 +2,9 @@
   <el-container class="layout-container">
     <!-- 侧边栏 -->
     <el-aside :width="appStore.sidebarCollapsed ? '64px' : '220px'" class="sidebar">
-      <div class="logo">
+      <div class="logo" @click="router.push('/dashboard')" style="cursor: pointer;">
         <el-icon :size="32" color="#fff"><FirstAidKit /></el-icon>
-        <span v-show="!appStore.sidebarCollapsed" class="logo-text">医院商城后台</span>
+        <span v-show="!appStore.sidebarCollapsed" class="logo-text">福建省人民医院商城管理后台</span>
       </div>
       <el-menu
         :default-active="route.path"
@@ -101,7 +101,7 @@
           <el-dropdown @command="handleCommand">
             <span class="user-info">
               <el-avatar :size="32" icon="UserFilled" />
-              <span class="username">{{ userStore.userInfo?.realName || '管理员' }}</span>
+              <span class="username">{{ userStore.userInfo?.realName || '梅恒成(管理员)' }}</span>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
