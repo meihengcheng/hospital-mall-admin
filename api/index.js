@@ -715,4 +715,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: '服务运行正常' });
 });
 
-module.exports = app;
+module.exports = (req, res) => {
+  app(req, res);
+};
