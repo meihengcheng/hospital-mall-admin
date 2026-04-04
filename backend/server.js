@@ -366,6 +366,49 @@ const orders = [
   }
 ];
 
+const categories = [
+  {
+    id: '1',
+    name: '抗生素',
+    level: 1,
+    sort: 1,
+    status: 'on',
+    children: []
+  },
+  {
+    id: '2',
+    name: '解热镇痛',
+    level: 1,
+    sort: 2,
+    status: 'on',
+    children: []
+  },
+  {
+    id: '3',
+    name: '男科用药',
+    level: 1,
+    sort: 3,
+    status: 'on',
+    children: []
+  },
+  {
+    id: '4',
+    name: '医疗器械',
+    level: 1,
+    sort: 4,
+    status: 'on',
+    children: []
+  },
+  {
+    id: '5',
+    name: '保健品',
+    level: 1,
+    sort: 5,
+    status: 'on',
+    children: []
+  }
+];
+
 // 生成ID
 const generateId = () => {
   return Math.random().toString(36).substr(2, 9);
@@ -382,11 +425,13 @@ const generateOrderNo = () => {
 const userRoutes = require('./routes/users')(users, generateId);
 const productRoutes = require('./routes/products')(products, generateId);
 const orderRoutes = require('./routes/orders')(orders, generateId, generateOrderNo);
+const categoryRoutes = require('./routes/categories')(categories, generateId);
 
 // 使用路由
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

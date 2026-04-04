@@ -5,103 +5,83 @@
         <div class="card-header">
           <div class="header-left">
             <span class="title">订单管理</span>
-            <el-input
-              v-model="searchForm.keyword"
-              placeholder="搜索订单号/用户名"
-              style="width: 240px; margin-left: 16px;"
-              clearable
-              @keyup.enter="handleSearch"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-            <el-select v-model="searchForm.status" placeholder="订单状态" clearable style="width: 120px; margin-left: 12px;">
+            <el-select v-model="searchForm.status" placeholder="订单状态" clearable style="width: 140px; margin-left: 16px;">
               <el-option label="待支付" value="pending" />
-              <el-option label="已支付" value="paid" />
               <el-option label="处理中" value="processing" />
               <el-option label="已发货" value="shipped" />
-              <el-option label="已完成" value="completed" />
+              <el-option label="已收货" value="delivered" />
               <el-option label="已取消" value="cancelled" />
             </el-select>
-            <el-date-picker
-              v-model="searchForm.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              style="width: 260px; margin-left: 12px;"
-            />
             <el-button type="primary" style="margin-left: 12px;" @click="handleSearch">
               <el-icon><Search /></el-icon>查询
             </el-button>
             <el-button @click="handleReset">重置</el-button>
           </div>
-          <div class="header-right">
-            <el-button type="success" @click="handleExport">
-              <el-icon><Download /></el-icon>导出
-            </el-button>
-          </div>
         </div>
       </template>
-
+      
       <el-table :data="orderList" v-loading="loading" stripe>
-        <el-table-column type="index" width="50" />
-        <el-table-column prop="orderNo" label="订单号" width="160" />
-        <el-table-column prop="userName" label="用户" width="100" />
-        <el-table-column prop="items" label="商品" min-width="200" show-overflow-tooltip>
+        <el-table-column type="index" width="55" />
+        <el-table-column prop="orderNo" label="订单号" width="200" />
+        <el-table-column label="商品" min-width="200">
           <template #default="{ row }">
-            {{ row.items.map((item: any) => item.productName).join(', ') }}
+            {{ row.products?.map((p: any) => p.name).join(', ') }}
           </template>
         </el-table-column>
-        <el-table-column prop="totalAmount" label="金额" width="100">
+        <el-table-column prop="totalAmount" label="总金额" width="120">
           <template #default="{ row }">
-            <span style="color: #f5222d; font-weight: 600;">{{ formatMoney(row.totalAmount) }}</span>
+            {{ formatMoney(row.totalAmount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="90">
+        <el-table-column prop="status" label="订单状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="formatStatus(row.status, 'order').type" size="small">
-              {{ formatStatus(row.status, 'order').text }}
+            <el-tag :type="getOrderStatusType(row.status)" size="small">
+              {{ getOrderStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="deliveryType" label="配送方式" width="90">
+        <el-table-column prop="paymentStatus" label="支付状态" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.deliveryType === 'self'" type="info" size="small">自提</el-tag>
-            <el-tag v-else type="success" size="small">配送</el-tag>
+            <el-tag :type="row.paymentStatus === 'paid' ? 'success' : 'warning'" size="small">
+              {{ row.paymentStatus === 'paid' ? '已支付' : '未支付' }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="下单时间" width="160">
+        <el-table-column prop="shippingAddress" label="收货地址" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="contactPhone" label="联系电话" width="130" />
+        <el-table-column prop="createdAt" label="创建时间" width="180">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="handleView(row)">详情</el-button>
-            <el-button
-              v-if="row.status === 'paid'"
-              type="success"
-              link
-              size="small"
-              @click="handleShip(row)"
-            >
-              发货
-            </el-button>
-            <el-button
-              v-if="row.status === 'pending'"
-              type="danger"
-              link
-              size="small"
-              @click="handleCancel(row)"
-            >
-              取消
-            </el-button>
+            <template v-if="row.status === 'processing'">
+              <el-button type="success" link size="small" @click="handleShip(row)">发货</el-button>
+            </template>
+            <template v-else-if="row.status === 'shipped'">
+              <el-button type="warning" link size="small" @click="handleCancelShip(row)">取消发货</el-button>
+            </template>
+            <el-dropdown @command="(status: string) => handleChangeStatus(row, status)" trigger="click">
+              <el-button type="primary" link size="small">
+                修改状态
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="pending" :disabled="row.status === 'pending'">待支付</el-dropdown-item>
+                  <el-dropdown-item command="processing" :disabled="row.status === 'processing'">处理中</el-dropdown-item>
+                  <el-dropdown-item command="shipped" :disabled="row.status === 'shipped'">已发货</el-dropdown-item>
+                  <el-dropdown-item command="delivered" :disabled="row.status === 'delivered'">已收货</el-dropdown-item>
+                  <el-dropdown-item command="cancelled" :disabled="row.status === 'cancelled'">已取消</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
-
+      
       <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
@@ -109,12 +89,12 @@
           :page-sizes="[10, 20, 50, 100]"
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+          @size-change="handlePageChange"
+          @current-change="handlePageChange"
         />
       </div>
     </el-card>
-
+    
     <!-- 订单详情弹窗 -->
     <el-dialog v-model="detailVisible" title="订单详情" width="700px">
       <div v-if="currentOrder" class="order-detail">
@@ -123,38 +103,39 @@
           <el-descriptions :column="2" border>
             <el-descriptions-item label="订单号">{{ currentOrder.orderNo }}</el-descriptions-item>
             <el-descriptions-item label="订单状态">
-              <el-tag :type="formatStatus(currentOrder.status, 'order').type">
-                {{ formatStatus(currentOrder.status, 'order').text }}
+              <el-tag :type="getOrderStatusType(currentOrder.status)">
+                {{ getOrderStatusText(currentOrder.status) }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="下单时间">{{ formatDate(currentOrder.createdAt) }}</el-descriptions-item>
-            <el-descriptions-item label="配送方式">
-              {{ currentOrder.deliveryType === 'self' ? '院内自提' : '配送到家' }}
+            <el-descriptions-item label="支付状态">
+              <el-tag :type="currentOrder.paymentStatus === 'paid' ? 'success' : 'warning'">
+                {{ currentOrder.paymentStatus === 'paid' ? '已支付' : '未支付' }}
+              </el-tag>
             </el-descriptions-item>
-          </el-descriptions>
-        </div>
-
-        <div class="detail-section">
-          <div class="section-title">用户信息</div>
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="用户姓名">{{ currentOrder.userName }}</el-descriptions-item>
-            <el-descriptions-item label="联系电话">13800138001</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ formatDate(currentOrder.createdAt) }}</el-descriptions-item>
           </el-descriptions>
         </div>
 
         <div class="detail-section">
           <div class="section-title">商品信息</div>
-          <el-table :data="currentOrder.items" border size="small">
-            <el-table-column prop="productName" label="商品名称" />
-            <el-table-column prop="specification" label="规格" width="120" />
+          <el-table :data="currentOrder.products" border size="small">
+            <el-table-column prop="name" label="商品名称" />
+            <el-table-column prop="quantity" label="数量" width="80" />
             <el-table-column prop="price" label="单价" width="100">
               <template #default="{ row }">{{ formatMoney(row.price) }}</template>
             </el-table-column>
-            <el-table-column prop="quantity" label="数量" width="80" />
-            <el-table-column prop="subtotal" label="小计" width="100">
-              <template #default="{ row }">{{ formatMoney(row.subtotal) }}</template>
+            <el-table-column label="小计" width="100">
+              <template #default="{ row }">{{ formatMoney(row.price * row.quantity) }}</template>
             </el-table-column>
           </el-table>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-title">收货信息</div>
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="收货地址">{{ currentOrder.shippingAddress || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="联系电话">{{ currentOrder.contactPhone || '-' }}</el-descriptions-item>
+          </el-descriptions>
         </div>
 
         <div class="detail-section">
@@ -163,10 +144,6 @@
             <div class="fee-item">
               <span>商品总额：</span>
               <span>{{ formatMoney(currentOrder.totalAmount) }}</span>
-            </div>
-            <div class="fee-item">
-              <span>运费：</span>
-              <span>{{ formatMoney(0) }}</span>
             </div>
             <div class="fee-item total">
               <span>实付金额：</span>
@@ -184,7 +161,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { formatMoney, formatDate, formatStatus } from '@/utils/format'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { formatMoney } from '@/utils/format'
 import type { Order } from '@/types'
 import request from '@/utils/request'
 
@@ -193,9 +171,7 @@ const detailVisible = ref(false)
 const currentOrder = ref<Order | null>(null)
 
 const searchForm = reactive({
-  keyword: '',
-  status: '',
-  dateRange: []
+  status: ''
 })
 
 const pagination = reactive({
@@ -227,21 +203,46 @@ const getOrders = async () => {
   }
 }
 
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleString('zh-CN')
+}
+
+const getOrderStatusType = (status: string) => {
+  const typeMap: Record<string, string> = {
+    pending: 'warning',
+    processing: 'primary',
+    shipped: 'info',
+    delivered: 'success',
+    cancelled: 'danger'
+  }
+  return typeMap[status] || ''
+}
+
+const getOrderStatusText = (status: string) => {
+  const textMap: Record<string, string> = {
+    pending: '待支付',
+    processing: '处理中',
+    shipped: '已发货',
+    delivered: '已收货',
+    cancelled: '已取消'
+  }
+  return textMap[status] || status
+}
+
 const handleSearch = () => {
   pagination.page = 1
   getOrders()
 }
 
 const handleReset = () => {
-  searchForm.keyword = ''
   searchForm.status = ''
-  searchForm.dateRange = []
   pagination.page = 1
   getOrders()
 }
 
-const handleExport = () => {
-  ElMessage.success('导出成功')
+// 分页变化
+const handlePageChange = () => {
+  getOrders()
 }
 
 const handleView = (row: Order) => {
@@ -251,25 +252,35 @@ const handleView = (row: Order) => {
 
 const handleShip = async (row: Order) => {
   await ElMessageBox.confirm('确定要发货吗？', '提示', { type: 'warning' })
-  row.status = 'shipped'
-  row.shippedAt = new Date().toISOString()
-  ElMessage.success('发货成功')
+  try {
+    await request.put(`/orders/${row.id}/status`, { status: 'shipped' })
+    ElMessage.success('发货成功')
+    getOrders()
+  } catch (error: any) {
+    ElMessage.error(error.message || '发货失败，请重试')
+  }
 }
 
-const handleCancel = async (row: Order) => {
-  await ElMessageBox.confirm('确定要取消该订单吗？', '警告', { type: 'error' })
-  row.status = 'cancelled'
-  ElMessage.success('订单已取消')
+const handleCancelShip = async (row: Order) => {
+  await ElMessageBox.confirm('确定要取消发货吗？', '提示', { type: 'warning' })
+  try {
+    await request.put(`/orders/${row.id}/status`, { status: 'processing' })
+    ElMessage.success('取消发货成功')
+    getOrders()
+  } catch (error: any) {
+    ElMessage.error(error.message || '取消发货失败，请重试')
+  }
 }
 
-const handleSizeChange = (val: number) => {
-  pagination.pageSize = val
-  getOrders()
-}
-
-const handleCurrentChange = (val: number) => {
-  pagination.page = val
-  getOrders()
+const handleChangeStatus = async (row: Order, status: string) => {
+  await ElMessageBox.confirm(`确定要将订单状态修改为${getOrderStatusText(status)}吗？`, '提示', { type: 'warning' })
+  try {
+    await request.put(`/orders/${row.id}/status`, { status })
+    ElMessage.success('修改状态成功')
+    getOrders()
+  } catch (error: any) {
+    ElMessage.error(error.message || '修改状态失败，请重试')
+  }
 }
 
 onMounted(() => {
@@ -283,18 +294,18 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
+    
     .header-left {
       display: flex;
       align-items: center;
-
+      
       .title {
         font-size: 16px;
         font-weight: 600;
       }
     }
   }
-
+  
   .pagination-wrapper {
     display: flex;
     justify-content: flex-end;

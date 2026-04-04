@@ -1,34 +1,25 @@
 // 用户相关类型
 export interface User {
-  id: number
+  id: string
   username: string
-  phone: string
-  email?: string
-  realName?: string
-  idCard?: string
-  memberLevel: 'normal' | 'silver' | 'gold' | 'vip'
-  status: 'active' | 'frozen' | 'banned'
-  authStatus: 'pending' | 'approved' | 'rejected'
+  realName: string
+  role: string
+  roleName: string
+  permissions: string[]
   createdAt: string
-  lastLoginAt?: string
 }
 
 // 商品相关类型
 export interface Product {
-  id: number
+  id: string
   name: string
   category: string
-  categoryId: number
   price: number
   stock: number
-  safetyStock: number
-  status: 'on' | 'off'
-  specification: string
-  manufacturer: string
-  approvalNumber?: string
-  expiryDate?: string
-  images: string[]
   description?: string
+  status: 'active' | 'inactive' | 'on' | 'off'
+  type?: 'general' | 'prescription'
+  expiryDate?: string
   createdAt: string
   updatedAt: string
 }
@@ -44,48 +35,31 @@ export interface ProductCategory {
 
 // 订单相关类型
 export interface Order {
-  id: number
+  id: string
   orderNo: string
-  userId: number
-  userName: string
+  userId: string
+  products: OrderItem[]
   totalAmount: number
   status: OrderStatus
-  deliveryType: 'self' | 'delivery'
-  address?: Address
-  items: OrderItem[]
-  prescription?: Prescription
+  paymentStatus: 'unpaid' | 'paid' | 'refunded'
+  shippingAddress?: string
+  contactPhone?: string
   createdAt: string
-  paidAt?: string
-  shippedAt?: string
-  completedAt?: string
+  updatedAt: string
 }
 
 export type OrderStatus = 
   | 'pending' 
-  | 'paid' 
   | 'processing' 
   | 'shipped' 
-  | 'completed' 
-  | 'cancelled' 
-  | 'refunding'
+  | 'delivered' 
+  | 'cancelled'
 
 export interface OrderItem {
-  id: number
-  productId: number
-  productName: string
-  specification: string
-  price: number
-  quantity: number
-  subtotal: number
-}
-
-export interface Address {
+  productId: string
   name: string
-  phone: string
-  province: string
-  city: string
-  district: string
-  detail: string
+  quantity: number
+  price: number
 }
 
 // 处方相关类型

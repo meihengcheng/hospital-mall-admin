@@ -31,7 +31,7 @@ request.interceptors.response.use(
     const { code, message, data } = response.data
     
     if (code === 200) {
-      return data
+      return response.data
     }
     
     ElMessage.error(message || '请求失败')

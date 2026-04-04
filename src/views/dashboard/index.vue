@@ -223,10 +223,9 @@
       </template>
       <el-table :data="recentOrders" style="width: 100%">
         <el-table-column prop="orderNo" label="订单号" width="180" />
-        <el-table-column prop="userName" label="用户" width="120" />
-        <el-table-column prop="items" label="商品" show-overflow-tooltip>
+        <el-table-column label="商品" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.items.map((item: any) => item.productName).join(', ') }}
+            {{ row.products?.map((p: any) => p.name).join(', ') }}
           </template>
         </el-table-column>
         <el-table-column prop="totalAmount" label="金额" width="120">
@@ -236,8 +235,8 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="formatStatus(row.status, 'order').type" size="small">
-              {{ formatStatus(row.status, 'order').text }}
+            <el-tag :type="getOrderStatusType(row.status)" size="small">
+              {{ getOrderStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -276,70 +275,69 @@ const stats = ref<DashboardStats>({
 // 最近订单
 const recentOrders = ref<Order[]>([
   {
-    id: 1,
-    orderNo: 'DD202604040001',
-    userId: 1,
-    userName: '张三',
-    totalAmount: 268.50,
-    status: 'paid',
-    deliveryType: 'delivery',
-    items: [
-      { id: 1, productId: 1, productName: '阿莫西林胶囊', specification: '0.25g*24粒', price: 18.50, quantity: 2, subtotal: 37.00 },
-      { id: 2, productId: 2, productName: '感冒灵颗粒', specification: '10g*9袋', price: 23.50, quantity: 1, subtotal: 23.50 }
+    id: '1',
+    orderNo: 'ORD202604040001',
+    userId: '1',
+    products: [
+      { productId: '1', name: '阿莫西林胶囊', quantity: 2, price: 25.5 }
     ],
-    createdAt: '2026-04-04 14:30:00'
-  },
-  {
-    id: 2,
-    orderNo: 'DD202604040002',
-    userId: 2,
-    userName: '李四',
-    totalAmount: 156.00,
+    totalAmount: 51.0,
     status: 'pending',
-    deliveryType: 'self',
-    items: [
-      { id: 3, productId: 3, productName: '维生素C片', specification: '100mg*100片', price: 28.00, quantity: 2, subtotal: 56.00 }
-    ],
-    createdAt: '2026-04-04 14:25:00'
+    paymentStatus: 'unpaid',
+    createdAt: '2026-04-04 14:30:00',
+    updatedAt: '2026-04-04 14:30:00'
   },
   {
-    id: 3,
-    orderNo: 'DD202604040003',
-    userId: 3,
-    userName: '王五',
-    totalAmount: 468.00,
-    status: 'shipped',
-    deliveryType: 'delivery',
-    items: [
-      { id: 4, productId: 4, productName: '血压计', specification: '电子腕式', price: 298.00, quantity: 1, subtotal: 298.00 }
+    id: '2',
+    orderNo: 'ORD202604040002',
+    userId: '2',
+    products: [
+      { productId: '2', name: '布洛芬缓释胶囊', quantity: 1, price: 18.8 }
     ],
-    createdAt: '2026-04-04 14:20:00'
-  },
-  {
-    id: 4,
-    orderNo: 'DD202604040004',
-    userId: 4,
-    userName: '赵六',
-    totalAmount: 89.50,
-    status: 'completed',
-    deliveryType: 'self',
-    items: [
-      { id: 5, productId: 5, productName: '创可贴', specification: '100片/盒', price: 19.50, quantity: 1, subtotal: 19.50 }
-    ],
-    createdAt: '2026-04-04 14:15:00'
-  },
-  {
-    id: 5,
-    orderNo: 'DD202604040005',
-    userId: 5,
-    userName: '钱七',
-    totalAmount: 356.00,
+    totalAmount: 18.8,
     status: 'processing',
-    deliveryType: 'delivery',
-    items: [
-      { id: 6, productId: 6, productName: '血糖仪', specification: '含50片试纸', price: 198.00, quantity: 1, subtotal: 198.00 }
+    paymentStatus: 'paid',
+    createdAt: '2026-04-04 14:25:00',
+    updatedAt: '2026-04-04 14:25:00'
+  },
+  {
+    id: '3',
+    orderNo: 'ORD202604040003',
+    userId: '3',
+    products: [
+      { productId: '4', name: '电子血压计', quantity: 1, price: 298.0 }
     ],
-    createdAt: '2026-04-04 14:10:00'
+    totalAmount: 298.0,
+    status: 'shipped',
+    paymentStatus: 'paid',
+    createdAt: '2026-04-04 14:20:00',
+    updatedAt: '2026-04-04 14:20:00'
+  },
+  {
+    id: '4',
+    orderNo: 'ORD202604040004',
+    userId: '4',
+    products: [
+      { productId: '7', name: '创可贴', quantity: 1, price: 5.5 }
+    ],
+    totalAmount: 5.5,
+    status: 'delivered',
+    paymentStatus: 'paid',
+    createdAt: '2026-04-04 14:15:00',
+    updatedAt: '2026-04-04 14:15:00'
+  },
+  {
+    id: '5',
+    orderNo: 'ORD202604040005',
+    userId: '5',
+    products: [
+      { productId: '6', name: '维生素C片', quantity: 1, price: 28.0 }
+    ],
+    totalAmount: 28.0,
+    status: 'processing',
+    paymentStatus: 'paid',
+    createdAt: '2026-04-04 14:10:00',
+    updatedAt: '2026-04-04 14:10:00'
   }
 ])
 
@@ -449,6 +447,28 @@ const initCategoryChart = () => {
     ]
   }
   categoryChart.setOption(option)
+}
+
+const getOrderStatusType = (status: string) => {
+  const typeMap: Record<string, string> = {
+    pending: 'warning',
+    processing: 'primary',
+    shipped: 'info',
+    delivered: 'success',
+    cancelled: 'danger'
+  }
+  return typeMap[status] || ''
+}
+
+const getOrderStatusText = (status: string) => {
+  const textMap: Record<string, string> = {
+    pending: '待支付',
+    processing: '处理中',
+    shipped: '已发货',
+    delivered: '已收货',
+    cancelled: '已取消'
+  }
+  return textMap[status] || status
 }
 
 // 监听窗口大小变化

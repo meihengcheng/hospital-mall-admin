@@ -10,7 +10,7 @@
         </div>
       </template>
 
-      <el-table :data="categoryList" row-key="id" default-expand-all>
+      <el-table :data="categoryList" row-key="id" default-expand-all v-loading="loading">
         <el-table-column prop="name" label="分类名称" min-width="200">
           <template #default="{ row }">
             <el-icon v-if="row.level === 1" style="margin-right: 8px;"><Folder /></el-icon>
@@ -49,7 +49,7 @@
         <el-form-item label="分类名称">
           <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
         </el-form-item>
-        <el-form-item label="上级分类">
+        <el-form-item label="上级分类" v-if="dialogType === 'add'">
           <el-select v-model="categoryForm.parentId" style="width: 100%;" placeholder="请选择上级分类（不选则为一级分类）" clearable>
             <el-option
               v-for="item in parentCategories"
@@ -78,89 +78,107 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Folder, Document } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
+const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
 
 const categoryForm = ref({
-  id: 0,
+  id: '',
   name: '',
-  parentId: undefined as number | undefined,
+  parentId: null as string | null,
   sort: 0,
   status: 'on'
 })
 
-const categoryList = ref([
-  {
-    id: 1,
-    name: '药品',
-    level: 1,
-    sort: 1,
-    status: 'on',
-    children: [
-      { id: 11, name: '处方药', parentId: 1, level: 2, sort: 1, status: 'on' },
-      { id: 12, name: 'OTC药品', parentId: 1, level: 2, sort: 2, status: 'on' },
-      { id: 13, name: '中药饮片', parentId: 1, level: 2, sort: 3, status: 'on' }
-    ]
-  },
-  {
-    id: 2,
-    name: '医疗器械',
-    level: 1,
-    sort: 2,
-    status: 'on',
-    children: [
-      { id: 21, name: '家用医疗器械', parentId: 2, level: 2, sort: 1, status: 'on' },
-      { id: 22, name: '康复辅助器具', parentId: 2, level: 2, sort: 2, status: 'on' },
-      { id: 23, name: '医用耗材', parentId: 2, level: 2, sort: 3, status: 'on' }
-    ]
-  },
-  {
-    id: 3,
-    name: '保健品',
-    level: 1,
-    sort: 3,
-    status: 'on',
-    children: [
-      { id: 31, name: '保健食品', parentId: 3, level: 2, sort: 1, status: 'on' },
-      { id: 32, name: '营养补充剂', parentId: 3, level: 2, sort: 2, status: 'on' }
-    ]
-  }
-])
+const categoryList = ref<any[]>([])
+const flatCategories = ref<any[]>([])
 
 const parentCategories = computed(() => {
-  return categoryList.value.filter(item => item.level === 1)
+  return flatCategories.value.filter(item => item.level === 1)
 })
+
+const getCategories = async () => {
+  loading.value = true
+  try {
+    const [treeRes, flatRes] = await Promise.all([
+      request.get('/categories'),
+      request.get('/categories/flat')
+    ])
+    categoryList.value = treeRes.data
+    flatCategories.value = flatRes.data
+  } catch (error) {
+    ElMessage.error('获取分类列表失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 const handleAdd = () => {
   dialogType.value = 'add'
-  categoryForm.value = { id: 0, name: '', parentId: undefined, sort: 0, status: 'on' }
+  categoryForm.value = { id: '', name: '', parentId: null, sort: 0, status: 'on' }
   dialogVisible.value = true
 }
 
 const handleAddSub = (row: any) => {
   dialogType.value = 'add'
-  categoryForm.value = { id: 0, name: '', parentId: row.id, sort: 0, status: 'on' }
+  categoryForm.value = { id: '', name: '', parentId: row.id, sort: 0, status: 'on' }
   dialogVisible.value = true
 }
 
 const handleEdit = (row: any) => {
   dialogType.value = 'edit'
-  categoryForm.value = { ...row }
+  categoryForm.value = { 
+    id: row.id, 
+    name: row.name, 
+    parentId: row.parentId || null, 
+    sort: row.sort, 
+    status: row.status 
+  }
   dialogVisible.value = true
 }
 
-const handleSave = () => {
-  ElMessage.success(dialogType.value === 'add' ? '新增成功' : '保存成功')
-  dialogVisible.value = false
+const handleSave = async () => {
+  if (!categoryForm.value.name) {
+    ElMessage.warning('请输入分类名称')
+    return
+  }
+
+  try {
+    if (dialogType.value === 'add') {
+      await request.post('/categories', categoryForm.value)
+      ElMessage.success('新增成功')
+    } else {
+      await request.put(`/categories/${categoryForm.value.id}`, categoryForm.value)
+      ElMessage.success('保存成功')
+    }
+    dialogVisible.value = false
+    getCategories()
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
+  }
 }
 
 const handleDelete = async (row: any) => {
-  await ElMessageBox.confirm('确定要删除该分类吗？', '警告', { type: 'error' })
-  ElMessage.success('删除成功')
+  try {
+    await ElMessageBox.confirm('确定要删除该分类吗？', '警告', { type: 'error' })
+    await request.delete(`/categories/${row.id}`)
+    ElMessage.success('删除成功')
+    getCategories()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
 }
+
+onMounted(() => {
+  getCategories()
+})
 </script>
 
 <style scoped lang="scss">

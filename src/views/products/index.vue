@@ -17,14 +17,16 @@
               </template>
             </el-input>
             <el-select v-model="searchForm.category" placeholder="商品分类" clearable style="width: 140px; margin-left: 12px;">
-              <el-option label="处方药" value="prescription" />
-              <el-option label="OTC药品" value="otc" />
-              <el-option label="医疗器械" value="device" />
-              <el-option label="保健品" value="health" />
+              <el-option
+                v-for="item in categoryList"
+                :key="item.id"
+                :label="item.name"
+                :value="item.name"
+              />
             </el-select>
             <el-select v-model="searchForm.status" placeholder="商品状态" clearable style="width: 120px; margin-left: 12px;">
-              <el-option label="上架" value="on" />
-              <el-option label="下架" value="off" />
+              <el-option label="上架" value="active" />
+              <el-option label="下架" value="inactive" />
             </el-select>
             <el-button type="primary" style="margin-left: 12px;" @click="handleSearch">
               <el-icon><Search /></el-icon>查询
@@ -35,34 +37,14 @@
             <el-button type="primary" @click="handleAdd">
               <el-icon><Plus /></el-icon>新增商品
             </el-button>
-            <el-button @click="handleImport">
-              <el-icon><Upload /></el-icon>批量导入
-            </el-button>
-            <el-button @click="handleExport">
-              <el-icon><Download /></el-icon>导出
-            </el-button>
           </div>
         </div>
       </template>
       
       <el-table :data="productList" v-loading="loading" stripe>
-        <el-table-column type="selection" width="55" />
-        <el-table-column label="商品图片" width="100">
-          <template #default="{ row }">
-            <el-image 
-              :src="row.images[0] || '/placeholder.png'" 
-              style="width: 60px; height: 60px; border-radius: 4px;"
-              fit="cover"
-            />
-          </template>
-        </el-table-column>
+        <el-table-column type="index" width="55" />
         <el-table-column prop="name" label="商品名称" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="category" label="分类" width="120">
-          <template #default="{ row }">
-            {{ getCategoryName(row.category) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="specification" label="规格" width="150" show-overflow-tooltip />
+        <el-table-column prop="category" label="分类" width="120" />
         <el-table-column prop="price" label="价格" width="100">
           <template #default="{ row }">
             {{ formatMoney(row.price) }}
@@ -70,29 +52,30 @@
         </el-table-column>
         <el-table-column prop="stock" label="库存" width="100">
           <template #default="{ row }">
-            <span :class="{ 'text-danger': row.stock < row.safetyStock }">
-              {{ row.stock }}
-            </span>
+            {{ row.stock }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="type" label="类型" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 'prescription' ? 'danger' : 'success'" size="small">
+              {{ row.type === 'prescription' ? '处方药' : '普通商品' }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'on' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'on' ? '上架' : '下架' }}
+            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
+              {{ row.status === 'active' ? '上架' : '下架' }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="expiryDate" label="有效期至" width="120">
           <template #default="{ row }">
-            <span v-if="isNearExpiry(row.expiryDate)" style="color: #f5222d;">
-              {{ row.expiryDate }}
-            </span>
-            <span v-else>{{ row.expiryDate || '-' }}</span>
+            {{ row.expiryDate ? formatDate(row.expiryDate) : '-' }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleView(row)">查看</el-button>
             <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button 
               type="primary" 
@@ -100,7 +83,7 @@
               size="small" 
               @click="handleToggleStatus(row)"
             >
-              {{ row.status === 'on' ? '下架' : '上架' }}
+              {{ row.status === 'active' ? '下架' : '上架' }}
             </el-button>
             <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
           </template>
@@ -124,39 +107,30 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '新增商品' : '编辑商品'"
-      width="700px"
+      width="600px"
     >
       <el-form :model="productForm" label-width="100px" :rules="formRules" ref="formRef">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="商品名称" prop="name">
-              <el-input v-model="productForm.name" placeholder="请输入商品名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="商品分类" prop="category">
-              <el-select v-model="productForm.category" style="width: 100%;" placeholder="请选择分类">
-                <el-option label="处方药" value="prescription" />
-                <el-option label="OTC药品" value="otc" />
-                <el-option label="医疗器械" value="device" />
-                <el-option label="保健品" value="health" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="商品名称" prop="name">
+          <el-input v-model="productForm.name" placeholder="请输入商品名称" />
+        </el-form-item>
         
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="规格" prop="specification">
-              <el-input v-model="productForm.specification" placeholder="如：0.25g*24粒" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="生产厂家" prop="manufacturer">
-              <el-input v-model="productForm.manufacturer" placeholder="请输入生产厂家" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="商品分类" prop="category">
+          <el-select v-model="productForm.category" style="width: 100%;" placeholder="请选择分类">
+            <el-option
+              v-for="item in categoryList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.name"
+            />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="商品类型" prop="type">
+          <el-radio-group v-model="productForm.type">
+            <el-radio label="general">普通商品</el-radio>
+            <el-radio label="prescription">处方药</el-radio>
+          </el-radio-group>
+        </el-form-item>
         
         <el-row :gutter="20">
           <el-col :span="12">
@@ -171,32 +145,8 @@
           </el-col>
         </el-row>
         
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="安全库存" prop="safetyStock">
-              <el-input-number v-model="productForm.safetyStock" :min="0" :precision="0" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="有效期至" prop="expiryDate">
-              <el-date-picker v-model="productForm.expiryDate" type="date" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        
-        <el-form-item label="批准文号" prop="approvalNumber">
-          <el-input v-model="productForm.approvalNumber" placeholder="请输入药品批准文号" />
-        </el-form-item>
-        
-        <el-form-item label="商品图片">
-          <el-upload
-            action="#"
-            list-type="picture-card"
-            :auto-upload="false"
-            :limit="5"
-          >
-            <el-icon><Plus /></el-icon>
-          </el-upload>
+        <el-form-item label="有效期至" prop="expiryDate">
+          <el-date-picker v-model="productForm.expiryDate" type="date" style="width: 100%;" />
         </el-form-item>
         
         <el-form-item label="商品描述" prop="description">
@@ -215,7 +165,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { formatMoney, formatStatus } from '@/utils/format'
+import { formatMoney } from '@/utils/format'
 import type { Product } from '@/types'
 import request from '@/utils/request'
 
@@ -241,11 +191,9 @@ const productForm = reactive<Partial<Product>>({
   category: '',
   price: 0,
   stock: 0,
-  safetyStock: 10,
-  status: 'on',
-  specification: '',
-  manufacturer: '',
-  images: []
+  status: 'active',
+  type: 'general',
+  description: ''
 })
 
 const formRules: FormRules = {
@@ -257,6 +205,17 @@ const formRules: FormRules = {
 
 // 商品数据
 const productList = ref<Product[]>([])
+const categoryList = ref<any[]>([])
+
+// 获取分类列表
+const getCategories = async () => {
+  try {
+    const response = await request.get('/categories/flat')
+    categoryList.value = response.data
+  } catch (error) {
+    ElMessage.error('获取分类列表失败')
+  }
+}
 
 // 获取商品列表
 const getProducts = async () => {
@@ -279,22 +238,8 @@ const getProducts = async () => {
   }
 }
 
-const getCategoryName = (category: string) => {
-  const map: Record<string, string> = {
-    prescription: '处方药',
-    otc: 'OTC药品',
-    device: '医疗器械',
-    health: '保健品'
-  }
-  return map[category] || category
-}
-
-const isNearExpiry = (date?: string) => {
-  if (!date) return false
-  const expiry = new Date(date)
-  const now = new Date()
-  const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  return diffDays <= 90 && diffDays > 0
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString('zh-CN')
 }
 
 const handleSearch = () => {
@@ -322,26 +267,11 @@ const handleAdd = () => {
     category: '',
     price: 0,
     stock: 0,
-    safetyStock: 10,
-    status: 'on',
-    specification: '',
-    manufacturer: '',
-    images: [],
+    status: 'active',
+    type: 'general',
     description: ''
   })
   dialogVisible.value = true
-}
-
-const handleImport = () => {
-  ElMessage.info('批量导入功能开发中')
-}
-
-const handleExport = () => {
-  ElMessage.success('导出成功')
-}
-
-const handleView = (row: Product) => {
-  ElMessage.info('查看商品详情')
 }
 
 const handleEdit = (row: Product) => {
@@ -375,14 +305,14 @@ const handleSave = async () => {
 }
 
 const handleToggleStatus = async (row: Product) => {
-  const action = row.status === 'on' ? '下架' : '上架'
+  const action = row.status === 'active' ? '下架' : '上架'
   await ElMessageBox.confirm(`确定要${action}该商品吗？`, '提示', { type: 'warning' })
   try {
     // 调用后端 API 更新状态
     await request.put(`/products/${row.id}`, {
-      status: row.status === 'on' ? 'inactive' : 'active'
+      status: row.status === 'active' ? 'inactive' : 'active'
     })
-    row.status = row.status === 'on' ? 'off' : 'on'
+    row.status = row.status === 'active' ? 'inactive' : 'active'
     ElMessage.success(`${action}成功`)
     // 重新获取商品列表
     getProducts()
@@ -404,17 +334,8 @@ const handleDelete = async (row: Product) => {
   }
 }
 
-const handleSizeChange = (val: number) => {
-  pagination.pageSize = val
-  handleSearch()
-}
-
-const handleCurrentChange = (val: number) => {
-  pagination.page = val
-  handleSearch()
-}
-
 onMounted(() => {
+  getCategories()
   getProducts()
 })
 </script>
@@ -435,11 +356,6 @@ onMounted(() => {
         font-weight: 600;
       }
     }
-  }
-  
-  .text-danger {
-    color: #f5222d;
-    font-weight: bold;
   }
   
   .pagination-wrapper {
