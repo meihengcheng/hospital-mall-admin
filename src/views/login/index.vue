@@ -3,8 +3,8 @@
     <div class="login-box">
       <div class="login-header">
         <el-icon :size="48" color="#1890ff"><FirstAidKit /></el-icon>
-        <h1 class="title">医院商城管理后台</h1>
-        <p class="subtitle">Hospital Mall Admin System</p>
+        <h1 class="title">福建省人民医院商城管理后台</h1>
+        <p class="subtitle">Fujian Provincial People's Hospital Mall Admin System</p>
       </div>
       
       <el-form
@@ -71,7 +71,7 @@
     </div>
     
     <div class="login-footer">
-      <p>© 2026 医院商城管理系统 版权所有</p>
+      <p>© 2026 福建省人民医院商城管理系统 版权所有</p>
     </div>
   </div>
 </template>
