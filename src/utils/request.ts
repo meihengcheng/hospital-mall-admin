@@ -1,6 +1,10 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { mockApi } from './mock-service'
+
+// 是否使用 Mock 数据（设为 true 则完全使用前端 Mock，无需后端）
+const USE_MOCK = true
 
 // 创建axios实例
 const request: AxiosInstance = axios.create({
@@ -10,6 +14,22 @@ const request: AxiosInstance = axios.create({
     'Content-Type': 'application/json'
   }
 })
+
+// Mock 请求封装
+const mockRequest = {
+  get: (url: string, config?: any) => {
+    return mockApi.get(url, config?.params)
+  },
+  post: (url: string, data?: any) => {
+    return mockApi.post(url, data)
+  },
+  put: (url: string, data?: any) => {
+    return mockApi.put(url, data)
+  },
+  delete: (url: string) => {
+    return mockApi.delete(url)
+  }
+}
 
 // 请求拦截器
 request.interceptors.request.use(
@@ -68,4 +88,7 @@ request.interceptors.response.use(
   }
 )
 
-export default request
+// 根据 USE_MOCK 决定使用真实请求还是 Mock 请求
+const exportRequest = USE_MOCK ? mockRequest : request
+
+export default exportRequest

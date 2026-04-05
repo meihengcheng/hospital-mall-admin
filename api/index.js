@@ -433,11 +433,11 @@ const buildCategoryTree = (list) => {
   return tree.sort((a, b) => a.sort - b.sort);
 };
 
-app.get('/api/users', (req, res) => {
+app.get('/users', (req, res) => {
   res.json({ code: 200, message: '获取用户列表成功', data: users });
 });
 
-app.post('/api/users/login', (req, res) => {
+app.post('/users/login', (req, res) => {
   const { username, password } = req.body;
   const user = users.find(u => u.username === username && u.password === password);
   if (user) {
@@ -447,7 +447,7 @@ app.post('/api/users/login', (req, res) => {
   }
 });
 
-app.get('/api/products', (req, res) => {
+app.get('/products', (req, res) => {
   try {
     const { page = 1, limit = 10, category, status, type } = req.query;
     
@@ -482,7 +482,7 @@ app.get('/api/products', (req, res) => {
   }
 });
 
-app.get('/api/products/:id', (req, res) => {
+app.get('/products/:id', (req, res) => {
   try {
     const product = products.find(p => p.id === req.params.id);
     if (!product) {
@@ -494,7 +494,7 @@ app.get('/api/products/:id', (req, res) => {
   }
 });
 
-app.post('/api/products', (req, res) => {
+app.post('/products', (req, res) => {
   try {
     const { name, category, price, stock, description, status, type, expiryDate } = req.body;
     
@@ -519,7 +519,7 @@ app.post('/api/products', (req, res) => {
   }
 });
 
-app.put('/api/products/:id', (req, res) => {
+app.put('/products/:id', (req, res) => {
   try {
     const { name, category, price, stock, description, status, type, expiryDate } = req.body;
     
@@ -545,7 +545,7 @@ app.put('/api/products/:id', (req, res) => {
   }
 });
 
-app.delete('/api/products/:id', (req, res) => {
+app.delete('/products/:id', (req, res) => {
   try {
     const productIndex = products.findIndex(p => p.id === req.params.id);
     if (productIndex === -1) {
@@ -559,7 +559,7 @@ app.delete('/api/products/:id', (req, res) => {
   }
 });
 
-app.get('/api/products/categories/list', (req, res) => {
+app.get('/products/categories/list', (req, res) => {
   try {
     const cats = [...new Set(products.map(p => p.category))];
     res.json({ code: 200, message: '获取商品分类成功', data: cats });
@@ -568,7 +568,7 @@ app.get('/api/products/categories/list', (req, res) => {
   }
 });
 
-app.get('/api/orders', (req, res) => {
+app.get('/orders', (req, res) => {
   try {
     const { page = 1, limit = 10, status } = req.query;
     
@@ -597,7 +597,7 @@ app.get('/api/orders', (req, res) => {
   }
 });
 
-app.get('/api/orders/:id', (req, res) => {
+app.get('/orders/:id', (req, res) => {
   try {
     const order = orders.find(o => o.id === req.params.id);
     if (!order) {
@@ -609,7 +609,7 @@ app.get('/api/orders/:id', (req, res) => {
   }
 });
 
-app.put('/api/orders/:id/status', (req, res) => {
+app.put('/orders/:id/status', (req, res) => {
   try {
     const { status, paymentStatus } = req.body;
     const orderIndex = orders.findIndex(o => o.id === req.params.id);
@@ -628,7 +628,7 @@ app.put('/api/orders/:id/status', (req, res) => {
   }
 });
 
-app.get('/api/categories', (req, res) => {
+app.get('/categories', (req, res) => {
   try {
     const tree = buildCategoryTree(categories);
     res.json({ code: 200, message: '获取分类列表成功', data: tree });
@@ -637,7 +637,7 @@ app.get('/api/categories', (req, res) => {
   }
 });
 
-app.get('/api/categories/flat', (req, res) => {
+app.get('/categories/flat', (req, res) => {
   try {
     res.json({ code: 200, message: '获取分类列表成功', data: categories });
   } catch (error) {
@@ -645,7 +645,7 @@ app.get('/api/categories/flat', (req, res) => {
   }
 });
 
-app.post('/api/categories', (req, res) => {
+app.post('/categories', (req, res) => {
   try {
     const { name, parentId, sort, status } = req.body;
     
@@ -667,7 +667,7 @@ app.post('/api/categories', (req, res) => {
   }
 });
 
-app.put('/api/categories/:id', (req, res) => {
+app.put('/categories/:id', (req, res) => {
   try {
     const { name, parentId, sort, status } = req.body;
     
@@ -692,7 +692,7 @@ app.put('/api/categories/:id', (req, res) => {
   }
 });
 
-app.delete('/api/categories/:id', (req, res) => {
+app.delete('/categories/:id', (req, res) => {
   try {
     const categoryIndex = categories.findIndex(c => c.id === req.params.id);
     if (categoryIndex === -1) {
@@ -711,7 +711,7 @@ app.delete('/api/categories/:id', (req, res) => {
   }
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: '服务运行正常' });
 });
 
